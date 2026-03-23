@@ -1,0 +1,62 @@
+# =============================================================================
+# Production overrides — H100 / shared storage
+# Usage: helm install ... -f values.yaml -f values-production.yaml
+# =============================================================================
+
+training:
+  modelVersionTag: "h100-prod-v1"
+  bf16: "true"
+  fp16: "false"
+  numEpochs: "3"
+  batchSize: "4"
+  gradAccum: "8"
+  configFile: "configs/h100_prod.yaml"
+
+nccl:
+  ibDisable: "0"
+  debug: "WARN"
+  # ibHca: "mlx5_0"
+  # netGdrLevel: "5"
+
+storage:
+  mode: shared
+  storageClass: nfs        # or efs-sc, fsx-lustre
+  shared:
+    dataSize: 200Gi
+    checkpointSize: 200Gi
+    accessMode: ReadWriteMany
+
+pytorchjob:
+  master:
+    gpusPerNode: 8
+    resources:
+      requests:
+        cpu: "16"
+        memory: "64Gi"
+      limits:
+        cpu: "32"
+        memory: "128Gi"
+  worker:
+    replicas: 3
+    gpusPerNode: 8
+    resources:
+      requests:
+        cpu: "16"
+        memory: "64Gi"
+      limits:
+        cpu: "32"
+        memory: "128Gi"
+  initContainer:
+    resources:
+      requests:
+        cpu: "4"
+        memory: "8Gi"
+      limits:
+        cpu: "8"
+        memory: "16Gi"
+  shmSize: "16Gi"
+  elasticPolicy:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 4
+  torchDistributedDebug: "OFF"

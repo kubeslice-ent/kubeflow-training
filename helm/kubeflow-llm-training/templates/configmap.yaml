@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubeflow-llm-training.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubeflow-llm-training.labels" . | nindent 4 }}
+data:
+  # Model
+  TRAIN_MODEL_NAME: {{ .Values.training.modelName | quote }}
+  TRAIN_MODEL_REVISION: {{ .Values.training.modelRevision | quote }}
+  # Quantization
+  TRAIN_QUANTIZATION: {{ .Values.training.quantization | quote }}
+  # LoRA
+  TRAIN_LORA_R: {{ .Values.training.lora.r | quote }}
+  TRAIN_LORA_ALPHA: {{ .Values.training.lora.alpha | quote }}
+  # Dataset
+  TRAIN_DATASET_SOURCE: {{ .Values.training.datasetSource | quote }}
+  TRAIN_DATASET_NAME: {{ .Values.training.datasetName | quote }}
+  {{- if .Values.training.datasetPath }}
+  TRAIN_DATASET_PATH: {{ .Values.training.datasetPath | quote }}
+  {{- end }}
+  # Training
+  TRAIN_MAX_SEQ_LENGTH: {{ .Values.training.maxSeqLength | quote }}
+  TRAIN_NUM_EPOCHS: {{ .Values.training.numEpochs | quote }}
+  TRAIN_BATCH_SIZE: {{ .Values.training.batchSize | quote }}
+  TRAIN_GRAD_ACCUM: {{ .Values.training.gradAccum | quote }}
+  TRAIN_LEARNING_RATE: {{ .Values.training.learningRate | quote }}
+  TRAIN_FP16: {{ .Values.training.fp16 | quote }}
+  TRAIN_BF16: {{ .Values.training.bf16 | quote }}
+  # Output
+  TRAIN_OUTPUT_DIR: {{ .Values.training.outputDir | quote }}
+  TRAIN_SAVE_STEPS: {{ .Values.training.saveSteps | quote }}
+  TRAIN_LOGGING_STEPS: {{ .Values.training.loggingSteps | quote }}
+  # Versioning
+  TRAIN_MODEL_VERSION_TAG: {{ .Values.training.modelVersionTag | quote }}
+  # Monitoring
+  TRAIN_REPORT_TO: {{ .Values.training.reportTo | quote }}
+  # NCCL
+  NCCL_DEBUG: {{ .Values.nccl.debug | quote }}
+  NCCL_IB_DISABLE: {{ .Values.nccl.ibDisable | quote }}
+  NCCL_SOCKET_IFNAME: {{ .Values.nccl.socketIfname | quote }}
+  {{- if .Values.nccl.ibHca }}
+  NCCL_IB_HCA: {{ .Values.nccl.ibHca | quote }}
+  {{- end }}
+  {{- if .Values.nccl.netGdrLevel }}
+  NCCL_NET_GDR_LEVEL: {{ .Values.nccl.netGdrLevel | quote }}
+  {{- end }}

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: kubeflow-llm-training
+description: Distributed LLM fine-tuning on Kubeflow using PyTorch FSDP and QLoRA
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - kubeflow
+  - pytorch
+  - llm
+  - fine-tuning
+  - distributed-training

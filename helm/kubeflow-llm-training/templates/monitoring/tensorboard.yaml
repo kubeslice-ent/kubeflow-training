@@ -1,0 +1,70 @@
+{{- if .Values.monitoring.tensorboard.enabled }}
+{{- $fullname := include "kubeflow-llm-training.fullname" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-tensorboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubeflow-llm-training.labels" . | nindent 4 }}
+    component: tensorboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $fullname }}-tensorboard
+  template:
+    metadata:
+      labels:
+        app: {{ $fullname }}-tensorboard
+    spec:
+      containers:
+        - name: tensorboard
+          image: {{ .Values.monitoring.tensorboard.image }}
+          command:
+            - tensorboard
+          args:
+            - "--logdir=/mnt/checkpoints/tensorboard"
+            - "--host=0.0.0.0"
+            - "--port=6006"
+            - "--reload_interval={{ .Values.monitoring.tensorboard.reloadInterval }}"
+          ports:
+            - name: http
+              containerPort: 6006
+          volumeMounts:
+            - name: checkpoint-volume
+              mountPath: /mnt/checkpoints
+              readOnly: true
+          resources:
+            requests:
+              memory: {{ .Values.monitoring.tensorboard.resources.requests.memory | quote }}
+              cpu: {{ .Values.monitoring.tensorboard.resources.requests.cpu | quote }}
+            limits:
+              memory: {{ .Values.monitoring.tensorboard.resources.limits.memory | quote }}
+              cpu: {{ .Values.monitoring.tensorboard.resources.limits.cpu | quote }}
+      volumes:
+        - name: checkpoint-volume
+          persistentVolumeClaim:
+            {{- if eq .Values.storage.mode "shared" }}
+            claimName: {{ $fullname }}-checkpoints-shared
+            {{- else }}
+            claimName: {{ $fullname }}-checkpoints-master
+            {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-tensorboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubeflow-llm-training.labels" . | nindent 4 }}
+    component: tensorboard
+spec:
+  type: {{ .Values.monitoring.tensorboard.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.monitoring.tensorboard.service.port }}
+      targetPort: 6006
+  selector:
+    app: {{ $fullname }}-tensorboard
+{{- end }}

@@ -1,0 +1,83 @@
+# H100/A10 Production Profile — High-end GPU training
+# Optimized for: Full production training, larger models, maximum throughput
+
+# Model — upgrade to larger model
+model_name: "meta-llama/Llama-3.1-8B-Instruct"
+model_revision: "main"
+trust_remote_code: false
+
+# Quantization — optional for H100 (80GB VRAM)
+# Set to "none" for full precision training, or keep "4bit" for larger models
+quantization: "4bit"
+bnb_4bit_compute_dtype: "bfloat16"
+bnb_4bit_quant_type: "nf4"
+bnb_4bit_use_double_quant: true
+
+# LoRA — higher rank for production quality
+lora_r: 64
+lora_alpha: 128
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# Dataset — S3 for production (pre-downloaded by init container)
+dataset_source: "s3"
+dataset_path: "/mnt/data/training_dataset"
+max_seq_length: 2048
+dataset_num_proc: 8
+
+# Training — aggressive for H100
+num_train_epochs: 3
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 2
+learning_rate: 2.0e-4
+weight_decay: 0.01
+warmup_ratio: 0.03
+lr_scheduler_type: "cosine"
+optim: "paged_adamw_32bit"
+
+# Precision — bf16 supported on H100/A10 (Ampere/Hopper)
+fp16: false
+bf16: true
+
+# Memory optimization
+gradient_checkpointing: true
+
+# FSDP — enable for multi-node production
+fsdp: "full_shard auto_wrap"
+fsdp_config:
+  fsdp_transformer_layer_cls_to_wrap: "LlamaDecoderLayer"
+  fsdp_backward_prefetch: "backward_pre"
+  fsdp_forward_prefetch: false
+  fsdp_use_orig_params: true
+  fsdp_state_dict_type: "FULL_STATE_DICT"
+  fsdp_offload_params: false
+
+# Output
+output_dir: "/mnt/checkpoints"
+save_strategy: "steps"
+save_steps: 500
+save_total_limit: 5
+logging_steps: 10
+logging_first_step: true
+
+# Versioning
+model_version_tag: "prod-v1"
+save_versioned_checkpoint: true
+
+# Monitoring
+report_to:
+  - tensorboard
+  - wandb
+tensorboard_dir: "/mnt/checkpoints/tensorboard"
+wandb_project: "kubeflow-llm-training"
+
+# Reproducibility
+seed: 42
+dataloader_num_workers: 4

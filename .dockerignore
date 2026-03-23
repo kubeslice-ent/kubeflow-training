@@ -1,0 +1,38 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs (not needed in container)
+*.md
+docs/
+DEMO_SCRIPT.md
+LICENSE
+
+# K8s manifests (not needed in container)
+k8s/
+
+# Local testing artifacts
+*.log
+wandb/
+runs/
+checkpoints/
+outputs/

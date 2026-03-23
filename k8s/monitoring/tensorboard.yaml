@@ -1,0 +1,75 @@
+# ===========================================================================
+# TensorBoard Deployment — Training Monitoring
+#
+# Deploys TensorBoard to visualize training metrics from the checkpoint PVC.
+#
+# Access:
+#   kubectl port-forward svc/tensorboard 6006:6006 -n kubeflow
+#   Then open: http://localhost:6006
+#
+# For production, consider using an Ingress or Kubeflow's built-in TensorBoard.
+# ===========================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tensorboard
+  namespace: kubeflow
+  labels:
+    app: tensorboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tensorboard
+  template:
+    metadata:
+      labels:
+        app: tensorboard
+    spec:
+      containers:
+        - name: tensorboard
+          image: tensorflow/tensorflow:2.15.0
+          command:
+            - tensorboard
+          args:
+            - "--logdir=/mnt/checkpoints/tensorboard"
+            - "--host=0.0.0.0"
+            - "--port=6006"
+            - "--reload_interval=30"
+          ports:
+            - name: http
+              containerPort: 6006
+          volumeMounts:
+            - name: checkpoint-volume
+              mountPath: /mnt/checkpoints
+              readOnly: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+      volumes:
+        - name: checkpoint-volume
+          persistentVolumeClaim:
+            claimName: training-checkpoints-master
+            # For shared PVC mode:
+            # claimName: training-checkpoints-shared
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tensorboard
+  namespace: kubeflow
+  labels:
+    app: tensorboard
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 6006
+      targetPort: 6006
+  selector:
+    app: tensorboard

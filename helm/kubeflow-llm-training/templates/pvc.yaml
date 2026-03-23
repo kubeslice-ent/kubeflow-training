@@ -1,0 +1,125 @@
+{{- if eq .Values.storage.mode "shared" }}
+# =============================================================================
+# Shared PVCs — single volume shared across all nodes (NFS/EFS/Lustre)
+# =============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kubeflow-llm-training.fullname" . }}-data-shared
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubeflow-llm-training.labels" . | nindent 4 }}
+    component: data-shared
+spec:
+  accessModes:
+    - {{ .Values.storage.shared.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.shared.dataSize }}
+  {{- if .Values.storage.storageClass }}
+  storageClassName: {{ .Values.storage.storageClass }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kubeflow-llm-training.fullname" . }}-checkpoints-shared
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubeflow-llm-training.labels" . | nindent 4 }}
+    component: checkpoints-shared
+spec:
+  accessModes:
+    - {{ .Values.storage.shared.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.shared.checkpointSize }}
+  {{- if .Values.storage.storageClass }}
+  storageClassName: {{ .Values.storage.storageClass }}
+  {{- end }}
+
+{{- else }}
+# =============================================================================
+# Per-Node PVCs — each node gets its own storage
+# =============================================================================
+
+# --- Master Node ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kubeflow-llm-training.fullname" . }}-data-master
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubeflow-llm-training.labels" . | nindent 4 }}
+    component: data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.perNode.dataSize }}
+  {{- if .Values.storage.storageClass }}
+  storageClassName: {{ .Values.storage.storageClass }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kubeflow-llm-training.fullname" . }}-checkpoints-master
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubeflow-llm-training.labels" . | nindent 4 }}
+    component: checkpoints
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.perNode.checkpointSize }}
+  {{- if .Values.storage.storageClass }}
+  storageClassName: {{ .Values.storage.storageClass }}
+  {{- end }}
+
+{{- $fullname := include "kubeflow-llm-training.fullname" . }}
+{{- $labels := include "kubeflow-llm-training.labels" . }}
+{{- range $i := until (int .Values.pytorchjob.worker.replicas) }}
+---
+# --- Worker Node {{ $i }} Data ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullname }}-data-worker-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- $labels | nindent 4 }}
+    component: data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ $.Values.storage.perNode.dataSize }}
+  {{- if $.Values.storage.storageClass }}
+  storageClassName: {{ $.Values.storage.storageClass }}
+  {{- end }}
+---
+# --- Worker Node {{ $i }} Checkpoints ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullname }}-checkpoints-worker-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- $labels | nindent 4 }}
+    component: checkpoints
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ $.Values.storage.perNode.checkpointSize }}
+  {{- if $.Values.storage.storageClass }}
+  storageClassName: {{ $.Values.storage.storageClass }}
+  {{- end }}
+{{- end }}
+{{- end }}
