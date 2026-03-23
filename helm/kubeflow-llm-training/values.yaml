@@ -26,9 +26,18 @@ training:
     alpha: "32"
 
   # Dataset
-  datasetSource: "huggingface"
-  datasetName: "tatsu-lab/alpaca"
-  # datasetPath: "/mnt/data/dataset"  # For local/S3 source
+  datasetSource: "huggingface"       # "huggingface", "s3", or "local"
+  datasetName: "tatsu-lab/alpaca"    # Used when datasetSource=huggingface
+
+  # S3 dataset options (used when datasetSource=s3)
+  s3:
+    bucket: ""
+    prefix: ""
+    endpoint: ""                     # Custom S3 endpoint (MinIO, etc.)
+    region: ""
+
+  # Local dataset options (used when datasetSource=local)
+  localPath: ""                      # Path inside the container
 
   # Hyperparameters
   maxSeqLength: "512"

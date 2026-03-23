@@ -224,7 +224,7 @@ def format_alpaca(example: dict) -> dict:
 @contextmanager
 def _main_process_first(rank: int):
     """Context manager to ensure dataset processing happens on main process first.
-    
+
     In distributed training, all processes try to load/process datasets simultaneously.
     This causes file lock contention, corrupted cache, or redundant downloads.
     """
@@ -464,9 +464,6 @@ def create_training_args(config: Dict[str, Any]) -> SFTConfig:
         # Memory optimization
         gradient_checkpointing=config["gradient_checkpointing"],
         gradient_checkpointing_kwargs={"use_reentrant": False},
-        # SFT specific
-        max_seq_length=config["max_seq_length"],
-        dataset_text_field=config["dataset_text_field"],
         packing=False,
         # Checkpointing
         save_strategy=config["save_strategy"],
@@ -512,7 +509,7 @@ def log_distributed_info():
     logger.info(f"  CUDA devices: {torch.cuda.device_count()}")
     for i in range(torch.cuda.device_count()):
         logger.info(f"    GPU {i}: {torch.cuda.get_device_name(i)} "
-                     f"({torch.cuda.get_device_properties(i).total_mem / 1e9:.1f} GB)")
+                     f"({torch.cuda.get_device_properties(i).total_memory / 1e9:.1f} GB)")
     logger.info("=" * 60)
 
 
@@ -603,6 +600,8 @@ def main():
         args=training_args,
         train_dataset=dataset,
         processing_class=tokenizer,
+        max_seq_length=config["max_seq_length"],
+        dataset_text_field=config["dataset_text_field"],
     )
 
     # Train

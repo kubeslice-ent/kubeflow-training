@@ -115,6 +115,9 @@ spec:
               args:
                 - "--config"
                 - "configs/t4_demo.yaml"   # Swap to h100_prod.yaml for production
+              envFrom:
+                - configMapRef:
+                    name: training-config
               env:
                 # ---- HuggingFace ----
                 - name: HF_TOKEN
@@ -125,16 +128,7 @@ spec:
                       optional: true
                 - name: HF_HOME
                   value: "/mnt/data/.cache/huggingface"
-                # ---- Training overrides (via ConfigMap) ----
-                - name: TRAIN_OUTPUT_DIR
-                  value: "/mnt/checkpoints"
-                # ---- NCCL Configuration ----
-                - name: NCCL_DEBUG
-                  value: "INFO"
-                - name: NCCL_IB_DISABLE
-                  value: "1"               # Set to "0" for InfiniBand
-                - name: NCCL_SOCKET_IFNAME
-                  value: "eth0"            # Adjust for your network interface
+                # ---- Torch Distributed ----
                 - name: TORCH_NCCL_BLOCKING_WAIT
                   value: "1"
                 # CRITICAL: Raise exceptions on NCCL errors instead of hanging
@@ -263,6 +257,9 @@ spec:
               args:
                 - "--config"
                 - "configs/t4_demo.yaml"
+              envFrom:
+                - configMapRef:
+                    name: training-config
               env:
                 - name: HF_TOKEN
                   valueFrom:
@@ -272,14 +269,6 @@ spec:
                       optional: true
                 - name: HF_HOME
                   value: "/mnt/data/.cache/huggingface"
-                - name: TRAIN_OUTPUT_DIR
-                  value: "/mnt/checkpoints"
-                - name: NCCL_DEBUG
-                  value: "INFO"
-                - name: NCCL_IB_DISABLE
-                  value: "1"
-                - name: NCCL_SOCKET_IFNAME
-                  value: "eth0"
                 - name: TORCH_NCCL_BLOCKING_WAIT
                   value: "1"
                 - name: TORCH_NCCL_ASYNC_ERROR_HANDLING

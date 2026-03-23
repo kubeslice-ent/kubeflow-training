@@ -1,0 +1,12 @@
+# Local validation tools — catches bugs before building Docker images
+-r requirements.txt
+
+# Static analysis (catches wrong attributes, bad signatures, type errors)
+pyright>=1.1.380
+
+# Linting
+ruff>=0.7.0
+
+# Testing
+pytest>=8.0.0
+pytest-mock>=3.14.0

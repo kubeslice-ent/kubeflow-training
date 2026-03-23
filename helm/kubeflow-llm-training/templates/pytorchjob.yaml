@@ -1,6 +1,37 @@
 {{- $fullname := include "kubeflow-llm-training.fullname" . }}
 {{- $secretName := include "kubeflow-llm-training.secretName" . }}
+{{- $configMapName := printf "%s-config" $fullname }}
 {{- $imageRef := printf "%s:%s" .Values.image.repository .Values.image.tag }}
+
+{{- /* Reusable init container args block */ -}}
+{{- define "kubeflow-llm-training.initArgs" -}}
+- "--source"
+- {{ .Values.training.datasetSource | quote }}
+{{- if eq .Values.training.datasetSource "huggingface" }}
+- "--name"
+- {{ .Values.training.datasetName | quote }}
+{{- else if eq .Values.training.datasetSource "s3" }}
+- "--s3-bucket"
+- {{ .Values.training.s3.bucket | quote }}
+- "--s3-prefix"
+- {{ .Values.training.s3.prefix | quote }}
+{{- if .Values.training.s3.endpoint }}
+- "--s3-endpoint"
+- {{ .Values.training.s3.endpoint | quote }}
+{{- end }}
+{{- if .Values.training.s3.region }}
+- "--s3-region"
+- {{ .Values.training.s3.region | quote }}
+{{- end }}
+{{- else if eq .Values.training.datasetSource "local" }}
+- "--local-path"
+- {{ .Values.training.localPath | quote }}
+{{- end }}
+- "--output"
+- "/mnt/data/dataset"
+- "--skip-if-exists"
+{{- end }}
+
 apiVersion: kubeflow.org/v1
 kind: PyTorchJob
 metadata:
@@ -41,13 +72,7 @@ spec:
                 - python
                 - data/download_dataset.py
               args:
-                - "--source"
-                - {{ .Values.training.datasetSource | quote }}
-                - "--name"
-                - {{ .Values.training.datasetName | quote }}
-                - "--output"
-                - "/mnt/data/dataset"
-                - "--skip-if-exists"
+                {{- include "kubeflow-llm-training.initArgs" . | nindent 16 }}
               env:
                 - name: HF_TOKEN
                   valueFrom:
@@ -94,6 +119,9 @@ spec:
               args:
                 - "--config"
                 - {{ .Values.training.configFile | quote }}
+              envFrom:
+                - configMapRef:
+                    name: {{ $configMapName }}
               env:
                 - name: HF_TOKEN
                   valueFrom:
@@ -103,14 +131,6 @@ spec:
                       optional: true
                 - name: HF_HOME
                   value: "/mnt/data/.cache/huggingface"
-                - name: TRAIN_OUTPUT_DIR
-                  value: {{ .Values.training.outputDir | quote }}
-                - name: NCCL_DEBUG
-                  value: {{ .Values.nccl.debug | quote }}
-                - name: NCCL_IB_DISABLE
-                  value: {{ .Values.nccl.ibDisable | quote }}
-                - name: NCCL_SOCKET_IFNAME
-                  value: {{ .Values.nccl.socketIfname | quote }}
                 - name: TORCH_NCCL_BLOCKING_WAIT
                   value: "1"
                 - name: TORCH_NCCL_ASYNC_ERROR_HANDLING
@@ -185,13 +205,7 @@ spec:
                 - python
                 - data/download_dataset.py
               args:
-                - "--source"
-                - {{ .Values.training.datasetSource | quote }}
-                - "--name"
-                - {{ .Values.training.datasetName | quote }}
-                - "--output"
-                - "/mnt/data/dataset"
-                - "--skip-if-exists"
+                {{- include "kubeflow-llm-training.initArgs" . | nindent 16 }}
               env:
                 - name: HF_TOKEN
                   valueFrom:
@@ -238,6 +252,9 @@ spec:
               args:
                 - "--config"
                 - {{ .Values.training.configFile | quote }}
+              envFrom:
+                - configMapRef:
+                    name: {{ $configMapName }}
               env:
                 - name: HF_TOKEN
                   valueFrom:
@@ -247,14 +264,6 @@ spec:
                       optional: true
                 - name: HF_HOME
                   value: "/mnt/data/.cache/huggingface"
-                - name: TRAIN_OUTPUT_DIR
-                  value: {{ .Values.training.outputDir | quote }}
-                - name: NCCL_DEBUG
-                  value: {{ .Values.nccl.debug | quote }}
-                - name: NCCL_IB_DISABLE
-                  value: {{ .Values.nccl.ibDisable | quote }}
-                - name: NCCL_SOCKET_IFNAME
-                  value: {{ .Values.nccl.socketIfname | quote }}
                 - name: TORCH_NCCL_BLOCKING_WAIT
                   value: "1"
                 - name: TORCH_NCCL_ASYNC_ERROR_HANDLING
