@@ -321,6 +321,4 @@ See [docs/CUSTOM_DATASET.md](docs/CUSTOM_DATASET.md) for:
 | Loss not decreasing | Verify dataset format; check `dataloader` is not empty |
 | Pods pending | Check GPU availability: `kubectl describe nodes \| grep nvidia` |
 
-## License
 
-MIT
