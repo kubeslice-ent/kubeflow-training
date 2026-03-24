@@ -120,7 +120,7 @@ spec:
               args:
                 - |
                   torchrun \
-                    --nproc_per_node={{ .Values.pytorchjob.master.gpusPerNode }} \
+                    --nproc_per_node=${GPUS_PER_NODE:-{{ .Values.pytorchjob.master.gpusPerNode }}} \
                     --nnodes=$WORLD_SIZE \
                     --node_rank=$RANK \
                     --master_addr=$MASTER_ADDR \
@@ -138,6 +138,8 @@ spec:
                 - configMapRef:
                     name: {{ $configMapName }}
               env:
+                - name: GPUS_PER_NODE
+                  value: {{ .Values.pytorchjob.master.gpusPerNode | quote }}
                 {{- if ne (.Values.pytorchjob.cudaVisibleDevices | toString) "" }}
                 - name: CUDA_VISIBLE_DEVICES
                   value: {{ .Values.pytorchjob.cudaVisibleDevices | quote }}
@@ -272,7 +274,7 @@ spec:
               args:
                 - |
                   torchrun \
-                    --nproc_per_node={{ .Values.pytorchjob.worker.gpusPerNode }} \
+                    --nproc_per_node=${GPUS_PER_NODE:-{{ .Values.pytorchjob.worker.gpusPerNode }}} \
                     --nnodes=$WORLD_SIZE \
                     --node_rank=$RANK \
                     --master_addr=$MASTER_ADDR \
@@ -290,6 +292,8 @@ spec:
                 - configMapRef:
                     name: {{ $configMapName }}
               env:
+                - name: GPUS_PER_NODE
+                  value: {{ .Values.pytorchjob.worker.gpusPerNode | quote }}
                 {{- if ne (.Values.pytorchjob.cudaVisibleDevices | toString) "" }}
                 - name: CUDA_VISIBLE_DEVICES
                   value: {{ .Values.pytorchjob.cudaVisibleDevices | quote }}

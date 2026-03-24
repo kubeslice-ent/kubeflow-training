@@ -115,7 +115,7 @@ spec:
               args:
                 - |
                   torchrun \
-                    --nproc_per_node=2 \
+                    --nproc_per_node=${GPUS_PER_NODE:-1} \
                     --nnodes=$WORLD_SIZE \
                     --node_rank=$RANK \
                     --master_addr=$MASTER_ADDR \
@@ -125,6 +125,9 @@ spec:
                 - configMapRef:
                     name: training-config
               env:
+                # ---- GPUs per node (change to match your hardware) ----
+                - name: GPUS_PER_NODE
+                  value: "1"          # Dev: 1 (single T4 per pod). Cloud: 2, 4, 8
                 # ---- HuggingFace ----
                 - name: HF_TOKEN
                   valueFrom:
@@ -161,11 +164,11 @@ spec:
                 requests:
                   memory: "16Gi"
                   cpu: "4"
-                  nvidia.com/gpu: "2"
+                  nvidia.com/gpu: "1"
                 limits:
                   memory: "32Gi"
                   cpu: "8"
-                  nvidia.com/gpu: "2"
+                  nvidia.com/gpu: "1"
 
           volumes:
             # Per-node PVC for data (configurable: switch to shared PVC)
@@ -263,7 +266,7 @@ spec:
               args:
                 - |
                   torchrun \
-                    --nproc_per_node=2 \
+                    --nproc_per_node=${GPUS_PER_NODE:-1} \
                     --nnodes=$WORLD_SIZE \
                     --node_rank=$RANK \
                     --master_addr=$MASTER_ADDR \
@@ -304,11 +307,11 @@ spec:
                 requests:
                   memory: "16Gi"
                   cpu: "4"
-                  nvidia.com/gpu: "2"
+                  nvidia.com/gpu: "1"
                 limits:
                   memory: "32Gi"
                   cpu: "8"
-                  nvidia.com/gpu: "2"
+                  nvidia.com/gpu: "1"
 
           volumes:
             - name: data-volume
