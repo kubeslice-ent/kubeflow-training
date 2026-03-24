@@ -185,7 +185,8 @@ def parse_args():
 # Dataset loading
 # ---------------------------------------------------------------------------
 
-ALPACA_TEMPLATE = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+ALPACA_TEMPLATE = """Below is an instruction that describes a task, paired with an input that provides\
+     further context. Write a response that appropriately completes the request.
 
 ### Instruction:
 {instruction}
@@ -196,7 +197,8 @@ ALPACA_TEMPLATE = """Below is an instruction that describes a task, paired with 
 ### Response:
 {output}"""
 
-ALPACA_TEMPLATE_NO_INPUT = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
+ALPACA_TEMPLATE_NO_INPUT = """Below is an instruction that describes a task. Write a response that appropriately\
+     completes the request.
 
 ### Instruction:
 {instruction}
@@ -299,6 +301,21 @@ def load_training_dataset(config: Dict[str, Any]):
 # Model loading
 # ---------------------------------------------------------------------------
 
+def _resolve_torch_dtype(config: Dict[str, Any]):
+    """Resolve model loading dtype.
+
+    For quantized models, use bnb_4bit_compute_dtype (float16/bfloat16) regardless
+    of the AMP fp16/bf16 flags — AMP GradScaler is incompatible with bitsandbytes.
+    """
+    if config["quantization"] in ("4bit", "8bit"):
+        return getattr(torch, config.get("bnb_4bit_compute_dtype", "float16"))
+    if config["fp16"]:
+        return torch.float16
+    if config["bf16"]:
+        return torch.bfloat16
+    return torch.float32
+
+
 def get_quantization_config(config: Dict[str, Any]) -> Optional[BitsAndBytesConfig]:
     """Create BitsAndBytesConfig based on quantization setting."""
     quant = config["quantization"]
@@ -371,7 +388,7 @@ def load_model_and_tokenizer(config: Dict[str, Any]):
         revision=revision,
         quantization_config=bnb_config,
         device_map=device_map,
-        torch_dtype=torch.float16 if config["fp16"] else (torch.bfloat16 if config["bf16"] else torch.float32),
+        torch_dtype=_resolve_torch_dtype(config),
         trust_remote_code=config["trust_remote_code"],
         token=os.environ.get("HF_TOKEN"),
         attn_implementation=attn_impl,
@@ -446,6 +463,20 @@ def create_training_args(config: Dict[str, Any]) -> SFTConfig:
         logger.warning(f"Optimizer '{optim}' is incompatible with FSDP — switching to 'adamw_torch'")
         optim = "adamw_torch"
 
+    # Detect SFTConfig field names (API changed across trl versions):
+    #   trl <0.28:  max_seq_length
+    #   trl >=0.28: max_length (renamed)
+    import dataclasses
+    sft_config_fields = {f.name for f in dataclasses.fields(SFTConfig)}
+
+    sft_kwargs = {}
+    if "max_seq_length" in sft_config_fields:
+        sft_kwargs["max_seq_length"] = config["max_seq_length"]
+    elif "max_length" in sft_config_fields:
+        sft_kwargs["max_length"] = config["max_seq_length"]
+    if "dataset_text_field" in sft_config_fields:
+        sft_kwargs["dataset_text_field"] = config["dataset_text_field"]
+
     training_args = SFTConfig(
         output_dir=output_dir,
         # Training hyperparams
@@ -488,6 +519,8 @@ def create_training_args(config: Dict[str, Any]) -> SFTConfig:
         # Misc
         remove_unused_columns=True,
         run_name=config.get("wandb_run_name"),
+        # SFT-specific (version dependent)
+        **sft_kwargs,
     )
 
     return training_args
@@ -600,8 +633,6 @@ def main():
         args=training_args,
         train_dataset=dataset,
         processing_class=tokenizer,
-        max_seq_length=config["max_seq_length"],
-        dataset_text_field=config["dataset_text_field"],
     )
 
     # Train

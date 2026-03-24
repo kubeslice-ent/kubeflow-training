@@ -67,13 +67,33 @@ def torch_cuda_device_properties_class():
 # 3. Library API validation — catches wrong function signatures
 # =========================================================================
 
+def test_sft_max_length_field_exists():
+    """SFTConfig must have either max_seq_length or max_length (renamed in trl>=0.28)."""
+    import dataclasses
+    from trl import SFTConfig
+
+    fields = {f.name for f in dataclasses.fields(SFTConfig)}
+    assert "max_seq_length" in fields or "max_length" in fields, \
+        f"SFTConfig has neither 'max_seq_length' nor 'max_length'. Fields: {sorted(fields)}"
+
+
+def test_sft_dataset_text_field_exists():
+    """SFTConfig must accept dataset_text_field."""
+    import dataclasses
+    from trl import SFTConfig
+
+    fields = {f.name for f in dataclasses.fields(SFTConfig)}
+    assert "dataset_text_field" in fields, \
+        f"SFTConfig missing 'dataset_text_field'. Fields: {sorted(fields)}"
+
+
 def test_sftconfig_signature():
     """Ensure SFTConfig params match what create_training_args() passes."""
     from trl import SFTConfig
     sig = inspect.signature(SFTConfig.__init__)
     params = set(sig.parameters.keys())
 
-    # These should be valid SFTConfig params (from create_training_args)
+    # These should always be valid SFTConfig params
     expected_in_config = [
         "output_dir", "num_train_epochs", "per_device_train_batch_size",
         "gradient_accumulation_steps", "learning_rate", "weight_decay",
@@ -85,12 +105,6 @@ def test_sftconfig_signature():
     for param in expected_in_config:
         assert param in params or "kwargs" in str(sig), \
             f"SFTConfig does not accept '{param}'. Check trl version."
-
-    # These should NOT be in SFTConfig (they moved to SFTTrainer in trl>=0.12)
-    should_not_be_in_config = ["max_seq_length", "dataset_text_field"]
-    for param in should_not_be_in_config:
-        if param in params:
-            pytest.skip(f"'{param}' is in SFTConfig — older trl version")
 
 
 def test_sfttrainer_signature():

@@ -42,8 +42,10 @@ warmup_ratio: 0.03
 lr_scheduler_type: "cosine"
 optim: "paged_adamw_32bit"
 
-# Precision — fp16 only (T4 = Turing arch, no bf16)
-fp16: true
+# Precision — disable AMP GradScaler; bitsandbytes 4-bit handles precision
+# internally via bnb_4bit_compute_dtype. AMP fp16 GradScaler is incompatible
+# with bitsandbytes ≥0.44 which produces bf16 gradients.
+fp16: false
 bf16: false
 
 # Memory optimization

@@ -123,6 +123,10 @@ spec:
                 - configMapRef:
                     name: {{ $configMapName }}
               env:
+                {{- if ne (.Values.pytorchjob.cudaVisibleDevices | toString) "" }}
+                - name: CUDA_VISIBLE_DEVICES
+                  value: {{ .Values.pytorchjob.cudaVisibleDevices | quote }}
+                {{- end }}
                 - name: HF_TOKEN
                   valueFrom:
                     secretKeyRef:
@@ -256,6 +260,10 @@ spec:
                 - configMapRef:
                     name: {{ $configMapName }}
               env:
+                {{- if ne (.Values.pytorchjob.cudaVisibleDevices | toString) "" }}
+                - name: CUDA_VISIBLE_DEVICES
+                  value: {{ .Values.pytorchjob.cudaVisibleDevices | quote }}
+                {{- end }}
                 - name: HF_TOKEN
                   valueFrom:
                     secretKeyRef:

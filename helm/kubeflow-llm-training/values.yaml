@@ -45,7 +45,7 @@ training:
   batchSize: "2"
   gradAccum: "4"
   learningRate: "0.0002"
-  fp16: "true"
+  fp16: "false"
   bf16: "false"
 
   # Output
@@ -97,6 +97,10 @@ storage:
 pytorchjob:
   name: llm-finetune
   restartPolicy: OnFailure
+
+  # Restrict which GPUs are visible (comma-separated indices, e.g., "0" or "0,1")
+  # Leave empty to use all GPUs on the node
+  cudaVisibleDevices: ""
 
   master:
     replicas: 1

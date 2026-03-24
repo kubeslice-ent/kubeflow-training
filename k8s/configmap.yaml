@@ -35,7 +35,9 @@ data:
   TRAIN_BATCH_SIZE: "2"
   TRAIN_GRAD_ACCUM: "4"
   TRAIN_LEARNING_RATE: "0.0002"
-  TRAIN_FP16: "true"
+  # AMP fp16/bf16 disabled for 4-bit QLoRA — bitsandbytes handles precision
+  # via bnb_4bit_compute_dtype. AMP GradScaler is incompatible with bnb ≥0.44.
+  TRAIN_FP16: "false"
   TRAIN_BF16: "false"
 
   # ---------- Output ----------
