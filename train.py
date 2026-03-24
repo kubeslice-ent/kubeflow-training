@@ -357,11 +357,11 @@ def load_model_and_tokenizer(config: Dict[str, Any]):
     bnb_config = get_quantization_config(config)
 
     # Model
-    # CRITICAL: device_map is incompatible with FSDP/DDP — when distributed,
-    # let Trainer/FSDP handle device placement. Only use device_map for
-    # single-GPU quantized inference/training.
-    world_size = int(os.environ.get("WORLD_SIZE", 1))
-    if bnb_config and world_size <= 1:
+    # For quantized models (QLoRA), each process must map the model to its own GPU
+    # via device_map. This works with both single-GPU and torchrun (DDP), where
+    # each process sees one GPU via LOCAL_RANK.
+    # For non-quantized FSDP, device_map must be None to let FSDP handle sharding.
+    if bnb_config:
         device_map = {"": int(os.environ.get("LOCAL_RANK", 0))}
     else:
         device_map = None

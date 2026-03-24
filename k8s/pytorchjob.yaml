@@ -110,11 +110,17 @@ spec:
             - name: pytorch
               image: YOUR_REGISTRY/kubeflow-llm-training:latest  # REPLACE
               command:
-                - python
-                - train.py
+                - /bin/sh
+                - -c
               args:
-                - "--config"
-                - "configs/t4_demo.yaml"   # Swap to h100_prod.yaml for production
+                - |
+                  torchrun \
+                    --nproc_per_node=2 \
+                    --nnodes=$WORLD_SIZE \
+                    --node_rank=$RANK \
+                    --master_addr=$MASTER_ADDR \
+                    --master_port=$MASTER_PORT \
+                    train.py --config configs/t4_demo.yaml
               envFrom:
                 - configMapRef:
                     name: training-config
@@ -252,11 +258,17 @@ spec:
             - name: pytorch
               image: YOUR_REGISTRY/kubeflow-llm-training:latest  # REPLACE
               command:
-                - python
-                - train.py
+                - /bin/sh
+                - -c
               args:
-                - "--config"
-                - "configs/t4_demo.yaml"
+                - |
+                  torchrun \
+                    --nproc_per_node=2 \
+                    --nnodes=$WORLD_SIZE \
+                    --node_rank=$RANK \
+                    --master_addr=$MASTER_ADDR \
+                    --master_port=$MASTER_PORT \
+                    train.py --config configs/t4_demo.yaml
               envFrom:
                 - configMapRef:
                     name: training-config

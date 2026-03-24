@@ -102,6 +102,10 @@ pytorchjob:
   # Leave empty to use all GPUs on the node
   cudaVisibleDevices: ""
 
+  # Launch mode: "torchrun" (multi-GPU per node via DDP) or "python" (single process)
+  # Use "torchrun" when gpusPerNode > 1; required for QLoRA which is incompatible with DataParallel
+  launchMode: "torchrun"
+
   master:
     replicas: 1
     gpusPerNode: 2

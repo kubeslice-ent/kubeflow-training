@@ -113,12 +113,27 @@ spec:
             - name: pytorch
               image: {{ $imageRef }}
               imagePullPolicy: {{ .Values.image.pullPolicy }}
+              {{- if eq .Values.pytorchjob.launchMode "torchrun" }}
+              command:
+                - /bin/sh
+                - -c
+              args:
+                - |
+                  torchrun \
+                    --nproc_per_node={{ .Values.pytorchjob.master.gpusPerNode }} \
+                    --nnodes=$WORLD_SIZE \
+                    --node_rank=$RANK \
+                    --master_addr=$MASTER_ADDR \
+                    --master_port=$MASTER_PORT \
+                    train.py --config {{ .Values.training.configFile }}
+              {{- else }}
               command:
                 - python
                 - train.py
               args:
                 - "--config"
                 - {{ .Values.training.configFile | quote }}
+              {{- end }}
               envFrom:
                 - configMapRef:
                     name: {{ $configMapName }}
@@ -250,12 +265,27 @@ spec:
             - name: pytorch
               image: {{ $imageRef }}
               imagePullPolicy: {{ .Values.image.pullPolicy }}
+              {{- if eq .Values.pytorchjob.launchMode "torchrun" }}
+              command:
+                - /bin/sh
+                - -c
+              args:
+                - |
+                  torchrun \
+                    --nproc_per_node={{ .Values.pytorchjob.worker.gpusPerNode }} \
+                    --nnodes=$WORLD_SIZE \
+                    --node_rank=$RANK \
+                    --master_addr=$MASTER_ADDR \
+                    --master_port=$MASTER_PORT \
+                    train.py --config {{ .Values.training.configFile }}
+              {{- else }}
               command:
                 - python
                 - train.py
               args:
                 - "--config"
                 - {{ .Values.training.configFile | quote }}
+              {{- end }}
               envFrom:
                 - configMapRef:
                     name: {{ $configMapName }}
