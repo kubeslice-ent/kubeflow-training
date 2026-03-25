@@ -183,19 +183,27 @@ spec:
 
           volumes:
             - name: data-volume
+              {{- if eq .Values.storage.mode "shared" }}
               persistentVolumeClaim:
-                {{- if eq .Values.storage.mode "shared" }}
                 claimName: {{ $fullname }}-data-shared
-                {{- else }}
-                claimName: {{ $fullname }}-data-master
-                {{- end }}
-            - name: checkpoint-volume
+              {{- else if eq .Values.storage.mode "per-node" }}
               persistentVolumeClaim:
-                {{- if eq .Values.storage.mode "shared" }}
+                claimName: {{ $fullname }}-data-master
+              {{- else }}
+              emptyDir:
+                sizeLimit: {{ .Values.storage.emptyDir.dataSize | quote }}
+              {{- end }}
+            - name: checkpoint-volume
+              {{- if eq .Values.storage.mode "shared" }}
+              persistentVolumeClaim:
                 claimName: {{ $fullname }}-checkpoints-shared
-                {{- else }}
+              {{- else if eq .Values.storage.mode "per-node" }}
+              persistentVolumeClaim:
                 claimName: {{ $fullname }}-checkpoints-master
-                {{- end }}
+              {{- else }}
+              emptyDir:
+                sizeLimit: {{ .Values.storage.emptyDir.checkpointSize | quote }}
+              {{- end }}
             - name: shm
               emptyDir:
                 medium: Memory
@@ -337,19 +345,28 @@ spec:
 
           volumes:
             - name: data-volume
+              {{- if eq .Values.storage.mode "shared" }}
               persistentVolumeClaim:
-                {{- if eq .Values.storage.mode "shared" }}
                 claimName: {{ $fullname }}-data-shared
-                {{- else }}
-                claimName: {{ $fullname }}-data-worker-0
-                {{- end }}
-            - name: checkpoint-volume
+              {{- else if eq .Values.storage.mode "per-node" }}
+              {{- /* Worker: uses worker-0 PVC. For multi-worker, use shared mode. */}}
               persistentVolumeClaim:
-                {{- if eq .Values.storage.mode "shared" }}
+                claimName: {{ $fullname }}-data-worker-0
+              {{- else }}
+              emptyDir:
+                sizeLimit: {{ .Values.storage.emptyDir.dataSize | quote }}
+              {{- end }}
+            - name: checkpoint-volume
+              {{- if eq .Values.storage.mode "shared" }}
+              persistentVolumeClaim:
                 claimName: {{ $fullname }}-checkpoints-shared
-                {{- else }}
+              {{- else if eq .Values.storage.mode "per-node" }}
+              persistentVolumeClaim:
                 claimName: {{ $fullname }}-checkpoints-worker-0
-                {{- end }}
+              {{- else }}
+              emptyDir:
+                sizeLimit: {{ .Values.storage.emptyDir.checkpointSize | quote }}
+              {{- end }}
             - name: shm
               emptyDir:
                 medium: Memory

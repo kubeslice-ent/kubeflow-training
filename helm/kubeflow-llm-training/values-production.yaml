@@ -20,7 +20,12 @@ nccl:
 
 storage:
   mode: shared
-  storageClass: nfs        # or efs-sc, fsx-lustre
+  # Set to your cluster's ReadWriteMany StorageClass:
+  #   AWS EKS:    efs-sc (EFS CSI driver)
+  #   GKE:        filestore-sc (Filestore CSI driver)
+  #   Azure AKS:  azurefile-csi
+  #   On-prem:    nfs, longhorn
+  storageClass: nfs
   shared:
     dataSize: 200Gi
     checkpointSize: 200Gi

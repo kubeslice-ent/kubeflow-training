@@ -24,7 +24,7 @@ spec:
           command:
             - tensorboard
           args:
-            - "--logdir=/mnt/checkpoints/tensorboard"
+            - "--logdir=/mnt/checkpoints"
             - "--host=0.0.0.0"
             - "--port=6006"
             - "--reload_interval={{ .Values.monitoring.tensorboard.reloadInterval }}"
@@ -44,12 +44,16 @@ spec:
               cpu: {{ .Values.monitoring.tensorboard.resources.limits.cpu | quote }}
       volumes:
         - name: checkpoint-volume
+          {{- if eq .Values.storage.mode "shared" }}
           persistentVolumeClaim:
-            {{- if eq .Values.storage.mode "shared" }}
             claimName: {{ $fullname }}-checkpoints-shared
-            {{- else }}
+          {{- else if eq .Values.storage.mode "per-node" }}
+          persistentVolumeClaim:
             claimName: {{ $fullname }}-checkpoints-master
-            {{- end }}
+          {{- else }}
+          emptyDir:
+            sizeLimit: {{ .Values.storage.emptyDir.checkpointSize | quote }}
+          {{- end }}
 ---
 apiVersion: v1
 kind: Service

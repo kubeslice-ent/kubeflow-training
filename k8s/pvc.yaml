@@ -1,122 +1,135 @@
 # ===========================================================================
 # Persistent Volume Claims for Training Data and Checkpoints
 #
-# Two modes:
-#   1. Per-node PVCs (default for T4 demo) — each node has its own storage
-#   2. Shared PVC (for production with NFS/EFS) — single shared volume
+# Three modes (pick ONE — uncomment the section you need):
 #
-# Uncomment the section you need based on your storage backend.
+#   Option A: Shared PVCs (RECOMMENDED)
+#     - Single PVC shared across all nodes via ReadWriteMany
+#     - Requires NFS/EFS/Longhorn StorageClass
+#     - TensorBoard sees all metrics from all nodes
+#
+#   Option B: Per-Node PVCs
+#     - Each node gets its own ReadWriteOnce PVC
+#     - IMPORTANT: StorageClass MUST use volumeBindingMode: WaitForFirstConsumer
+#       to ensure PVs are provisioned on the same node as the pod
+#     - Only supports 1 worker replica
+#
+#   Option C: No PVCs (emptyDir)
+#     - Comment out ALL PVCs below
+#     - Change pytorchjob.yaml volumes to use emptyDir instead of PVC
+#     - Data lost when pods terminate — use only for quick testing
+#
 # ===========================================================================
 
 # ===========================================================================
-# Option A: Per-Node PVCs (Default — T4 Demo)
-# Each node gets its own PVC. Data is downloaded independently by init containers.
+# Option A: Shared PVCs (Recommended — Production + Dev)
 # ===========================================================================
 
-# --- Master Node Data ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: training-data-master
+  name: training-data-shared
   namespace: kubeflow
   labels:
     app: llm-training
-    component: data
+    component: data-shared
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
-      storage: 50Gi
-  # storageClassName: your-storage-class  # Uncomment and set for your cluster
+      storage: 200Gi
+  storageClassName: nfs    # CHANGE to your RWX StorageClass (nfs, efs-sc, longhorn, etc.)
 
 ---
-# --- Master Node Checkpoints ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: training-checkpoints-master
+  name: training-checkpoints-shared
   namespace: kubeflow
   labels:
     app: llm-training
-    component: checkpoints
+    component: checkpoints-shared
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
-      storage: 50Gi
+      storage: 200Gi
+  storageClassName: nfs    # CHANGE to your RWX StorageClass
 
----
-# --- Worker Node Data ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: training-data-worker-0
-  namespace: kubeflow
-  labels:
-    app: llm-training
-    component: data
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 50Gi
-
----
-# --- Worker Node Checkpoints ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: training-checkpoints-worker-0
-  namespace: kubeflow
-  labels:
-    app: llm-training
-    component: checkpoints
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 50Gi
-
----
 # ===========================================================================
-# Option B: Shared PVCs (Production — NFS/EFS/Lustre)
-# Single PVC shared across all nodes. Requires ReadWriteMany storage class.
-# To use: uncomment below and update pytorchjob.yaml PVC names.
+# Option B: Per-Node PVCs (uncomment below, comment out Option A above)
+# IMPORTANT: Your StorageClass MUST have volumeBindingMode: WaitForFirstConsumer
 # ===========================================================================
 
+# # --- Master Node Data ---
 # apiVersion: v1
 # kind: PersistentVolumeClaim
 # metadata:
-#   name: training-data-shared
+#   name: training-data-master
 #   namespace: kubeflow
 #   labels:
 #     app: llm-training
-#     component: data-shared
+#     component: data
 # spec:
 #   accessModes:
-#     - ReadWriteMany
+#     - ReadWriteOnce
 #   resources:
 #     requests:
-#       storage: 200Gi
-#   storageClassName: nfs  # or efs-sc, fsx-lustre, etc.
+#       storage: 50Gi
+#   storageClassName: local-path  # MUST be WaitForFirstConsumer
 
 # ---
+# # --- Master Node Checkpoints ---
 # apiVersion: v1
 # kind: PersistentVolumeClaim
 # metadata:
-#   name: training-checkpoints-shared
+#   name: training-checkpoints-master
 #   namespace: kubeflow
 #   labels:
 #     app: llm-training
-#     component: checkpoints-shared
+#     component: checkpoints
 # spec:
 #   accessModes:
-#     - ReadWriteMany
+#     - ReadWriteOnce
 #   resources:
 #     requests:
-#       storage: 200Gi
-#   storageClassName: nfs
+#       storage: 50Gi
+#   storageClassName: local-path
+
+# ---
+# # --- Worker Node 0 Data ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: training-data-worker-0
+#   namespace: kubeflow
+#   labels:
+#     app: llm-training
+#     component: data
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 50Gi
+#   storageClassName: local-path
+
+# ---
+# # --- Worker Node 0 Checkpoints ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: training-checkpoints-worker-0
+#   namespace: kubeflow
+#   labels:
+#     app: llm-training
+#     component: checkpoints
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 50Gi
+#   storageClassName: local-path

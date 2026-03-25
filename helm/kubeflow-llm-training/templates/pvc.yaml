@@ -1,6 +1,7 @@
 {{- if eq .Values.storage.mode "shared" }}
 # =============================================================================
 # Shared PVCs — single volume shared across all nodes (NFS/EFS/Lustre)
+# Requires a StorageClass that supports ReadWriteMany (e.g., nfs, efs-sc)
 # =============================================================================
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -38,9 +39,11 @@ spec:
   storageClassName: {{ .Values.storage.storageClass }}
   {{- end }}
 
-{{- else }}
+{{- else if eq .Values.storage.mode "per-node" }}
 # =============================================================================
 # Per-Node PVCs — each node gets its own storage
+# IMPORTANT: Your StorageClass MUST use volumeBindingMode: WaitForFirstConsumer
+# to ensure PVs are provisioned on the same node as the pod.
 # =============================================================================
 
 # --- Master Node ---
@@ -122,4 +125,6 @@ spec:
   storageClassName: {{ $.Values.storage.storageClass }}
   {{- end }}
 {{- end }}
+
 {{- end }}
+{{- /* mode "emptyDir" creates no PVCs — volumes are ephemeral emptyDirs */ -}}

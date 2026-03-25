@@ -140,7 +140,7 @@ helm install training helm/kubeflow-llm-training/ \
   --set secrets.hfToken=hf_YOUR_TOKEN
 ```
 
-This deploys all resources (ConfigMap, Secrets, PVCs, PyTorchJob, TensorBoard) with T4 demo defaults: 2 nodes × 2 GPUs, per-node storage, 4-bit QLoRA.
+This deploys all resources (ConfigMap, Secrets, PVCs, PyTorchJob, TensorBoard) with T4 demo defaults: 2 nodes × 2 GPUs, shared storage, 4-bit QLoRA.
 
 ### Install (Production — H100 / shared storage)
 
@@ -188,12 +188,17 @@ helm install training helm/kubeflow-llm-training/ \
   --namespace kubeflow \
   --set monitoring.tensorboard.enabled=false
 
-# Use shared storage with a custom storage class
+# Switch storage mode (shared/per-node/emptyDir)
 helm install training helm/kubeflow-llm-training/ \
   --namespace kubeflow \
   --set storage.mode=shared \
   --set storage.storageClass=efs-sc \
   --set storage.shared.dataSize=500Gi
+
+# Quick test with ephemeral storage (no PVCs needed)
+helm install training helm/kubeflow-llm-training/ \
+  --namespace kubeflow \
+  --set storage.mode=emptyDir
 ```
 
 ### Upgrade & Uninstall
@@ -220,7 +225,7 @@ helm uninstall training --namespace kubeflow
 | `training.*` | Model, dataset, LoRA, hyperparameters, config file |
 | `nccl.*` | NCCL debug level, InfiniBand, network interface |
 | `secrets.*` | HF token, AWS creds, WandB key, or `existingSecret` |
-| `storage.*` | Mode (`per-node`/`shared`), sizes, storage class |
+| `storage.*` | Mode (`shared`/`per-node`/`emptyDir`), sizes, storage class |
 | `pytorchjob.*` | GPU count, replicas, resources, tolerations, elastic policy |
 | `monitoring.tensorboard.*` | Enable/disable, image, service type/port |
 
@@ -280,10 +285,113 @@ See [`helm/kubeflow-llm-training/values.yaml`](helm/kubeflow-llm-training/values
 
 ### Storage Modes
 
-| Mode | When to Use | How |
+Three storage modes are available. Choose based on your cluster capabilities:
+
+| Mode | When to Use | Helm Value |
 |---|---|---|
-| **Per-node PVC** | T4 demo, no shared storage | Default in `pvc.yaml` / `values.yaml` |
-| **Shared PVC** | Production with NFS/EFS | Uncomment in `pvc.yaml` or `helm install --set storage.mode=shared` |
+| **Shared PVC** (default) | Any cluster with RWX storage (NFS, EFS, Longhorn) | `storage.mode=shared` |
+| **Per-node PVC** | Single-worker setups with local-only storage | `storage.mode=per-node` |
+| **emptyDir** | Quick dev/testing, no persistence needed | `storage.mode=emptyDir` |
+
+#### Shared PVC (Recommended)
+
+All pods mount a single ReadWriteMany volume. Simplest setup — one place for data, checkpoints, and TensorBoard logs.
+
+**Requirements:** A StorageClass that supports `ReadWriteMany` access mode.
+
+| Cloud / Platform | StorageClass | Notes |
+|---|---|---|
+| AWS EKS | `efs-sc` | Install [EFS CSI Driver](https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html) first |
+| GKE | `filestore-sc` | Install [Filestore CSI Driver](https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/filestore-csi-driver) |
+| Azure AKS | `azurefile-csi` | Built-in with AKS |
+| On-prem / bare-metal | `nfs` | Deploy NFS provisioner or [Longhorn](https://longhorn.io/) |
+| k3s / Rancher | `longhorn` | Install Longhorn for RWX support |
+
+```bash
+# Helm — shared storage with EFS on AWS
+helm install training helm/kubeflow-llm-training/ \
+  --namespace kubeflow --create-namespace \
+  --set image.repository=myregistry.io/kubeflow-llm-training \
+  --set storage.mode=shared \
+  --set storage.storageClass=efs-sc \
+  --set storage.shared.dataSize=100Gi \
+  --set storage.shared.checkpointSize=100Gi
+
+# Raw manifests — edit k8s/pvc.yaml storageClassName, then:
+kubectl apply -f k8s/pvc.yaml
+```
+
+#### Per-node PVC
+
+Each pod gets its own ReadWriteOnce volume. Only use this when shared storage is unavailable.
+
+**Critical requirement:** Your StorageClass **MUST** use `volumeBindingMode: WaitForFirstConsumer`. Without this, the PV may be provisioned on a different node than the pod, causing mount failures.
+
+```bash
+# Check your StorageClass binding mode
+kubectl get storageclass -o custom-columns=NAME:.metadata.name,BINDING:.volumeBindingMode
+
+# Common StorageClasses with WaitForFirstConsumer:
+#   - local-path (k3s/Rancher)
+#   - gp3 / gp2 (EKS with EBS CSI)
+#   - premium-rwo (GKE)
+#   - managed-csi (AKS)
+```
+
+**Limitation:** Only supports 1 worker replica. PyTorchJob does not support per-replica volume templates, so all worker replicas would mount the same `worker-0` PVC. For multi-worker, use shared mode.
+
+```bash
+# Helm — per-node with local-path
+helm install training helm/kubeflow-llm-training/ \
+  --namespace kubeflow --create-namespace \
+  --set image.repository=myregistry.io/kubeflow-llm-training \
+  --set storage.mode=per-node \
+  --set storage.storageClass=local-path \
+  --set pytorchjob.worker.replicas=1
+```
+
+#### emptyDir (Ephemeral)
+
+No PVCs are created. Volumes use ephemeral `emptyDir` storage backed by the node's disk. Data and checkpoints are **lost when pods terminate**.
+
+Use this for quick smoke tests or when you don't care about persisting results.
+
+```bash
+# Helm — ephemeral storage
+helm install training helm/kubeflow-llm-training/ \
+  --namespace kubeflow --create-namespace \
+  --set image.repository=myregistry.io/kubeflow-llm-training \
+  --set storage.mode=emptyDir \
+  --set storage.emptyDir.dataSize=20Gi \
+  --set storage.emptyDir.checkpointSize=20Gi
+```
+
+#### How to check your available StorageClasses
+
+```bash
+# List all StorageClasses and their capabilities
+kubectl get storageclass
+
+# Check if a StorageClass supports ReadWriteMany (look for RWX in ALLOWEDTOPOLOGIES)
+kubectl describe storageclass <name>
+
+# Quick test: create a test PVC and see if it binds
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-rwx
+  namespace: default
+spec:
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: <your-storage-class>
+EOF
+kubectl get pvc test-rwx  # Should show "Bound"
+kubectl delete pvc test-rwx
+```
 
 ### Network Configuration
 

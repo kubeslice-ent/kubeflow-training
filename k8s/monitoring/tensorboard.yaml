@@ -32,7 +32,7 @@ spec:
           command:
             - tensorboard
           args:
-            - "--logdir=/mnt/checkpoints/tensorboard"
+            - "--logdir=/mnt/checkpoints"
             - "--host=0.0.0.0"
             - "--port=6006"
             - "--reload_interval=30"
@@ -53,9 +53,8 @@ spec:
       volumes:
         - name: checkpoint-volume
           persistentVolumeClaim:
-            claimName: training-checkpoints-master
-            # For shared PVC mode:
-            # claimName: training-checkpoints-shared
+            claimName: training-checkpoints-shared
+            # Per-node alternative: claimName: training-checkpoints-master
 
 ---
 apiVersion: v1

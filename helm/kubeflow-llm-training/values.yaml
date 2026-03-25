@@ -82,9 +82,19 @@ secrets:
   wandbApiKey: ""
 
 # -- Storage
+# Three modes available:
+#   "shared"   — (default, recommended) Single ReadWriteMany PVC shared by all pods.
+#                 Requires a StorageClass that supports RWX (NFS, EFS, Longhorn, etc.).
+#                 Simplest setup: one volume, all pods read/write, TensorBoard sees everything.
+#   "per-node" — Each pod gets its own ReadWriteOnce PVC. Your StorageClass MUST use
+#                 volumeBindingMode: WaitForFirstConsumer to ensure PVs are provisioned
+#                 on the same node as the pod. Only supports 1 worker replica (PyTorchJob
+#                 does not support per-replica volume templates).
+#   "emptyDir" — Ephemeral storage (no PVCs created). Data is lost when pods terminate.
+#                 Useful for quick dev/testing when you don't need persistent checkpoints.
 storage:
-  mode: per-node            # "per-node" or "shared"
-  storageClass: ""          # Empty = cluster default
+  mode: shared              # "shared", "per-node", or "emptyDir"
+  storageClass: ""          # StorageClass name (required for shared/per-node; empty = cluster default)
   perNode:
     dataSize: 50Gi
     checkpointSize: 50Gi
@@ -92,6 +102,9 @@ storage:
     dataSize: 200Gi
     checkpointSize: 200Gi
     accessMode: ReadWriteMany
+  emptyDir:
+    dataSize: 50Gi          # Size limit for ephemeral data volume
+    checkpointSize: 50Gi    # Size limit for ephemeral checkpoint volume
 
 # -- PyTorchJob
 pytorchjob:

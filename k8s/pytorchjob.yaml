@@ -171,16 +171,21 @@ spec:
                   nvidia.com/gpu: "1"
 
           volumes:
-            # Per-node PVC for data (configurable: switch to shared PVC)
+            # Shared PVC (recommended) — all pods share one volume
             - name: data-volume
               persistentVolumeClaim:
-                claimName: training-data-master  # Per-node PVC
-                # claimName: training-data-shared  # Shared PVC (NFS/EFS)
-            # Per-node PVC for checkpoints
+                claimName: training-data-shared
+                # Per-node alternative: claimName: training-data-master
+              # emptyDir alternative (no PVC needed):
+              # emptyDir:
+              #   sizeLimit: "50Gi"
             - name: checkpoint-volume
               persistentVolumeClaim:
-                claimName: training-checkpoints-master  # Per-node PVC
-                # claimName: training-checkpoints-shared  # Shared PVC
+                claimName: training-checkpoints-shared
+                # Per-node alternative: claimName: training-checkpoints-master
+              # emptyDir alternative:
+              # emptyDir:
+              #   sizeLimit: "50Gi"
             # Shared memory for NCCL
             - name: shm
               emptyDir:
@@ -316,12 +321,12 @@ spec:
           volumes:
             - name: data-volume
               persistentVolumeClaim:
-                claimName: training-data-worker-0  # Per-node PVC
-                # claimName: training-data-shared  # Shared PVC
+                claimName: training-data-shared
+                # Per-node alternative: claimName: training-data-worker-0
             - name: checkpoint-volume
               persistentVolumeClaim:
-                claimName: training-checkpoints-worker-0  # Per-node PVC
-                # claimName: training-checkpoints-shared  # Shared PVC
+                claimName: training-checkpoints-shared
+                # Per-node alternative: claimName: training-checkpoints-worker-0
             - name: shm
               emptyDir:
                 medium: Memory
