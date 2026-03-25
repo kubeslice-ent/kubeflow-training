@@ -51,8 +51,8 @@ jobs:
         shell: bash
         if: ${{ github.event.inputs.kubeflow-training == 'Yes' }}
         run: |
-          helm dependency update "helm/kubeflow-llm-training/"
-          helm package "helm/kubeflow-llm-training/" -u -d dest
+          helm dependency update "src/helm/kubeflow-llm-training/"
+          helm package "src/helm/kubeflow-llm-training/" -u -d dest
 
       - name: Update Helm Repository Index and Push Changes
         shell: bash
