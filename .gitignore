@@ -1,8 +1,0 @@
-__pycache__
-.claude/
-*.pyc
-*.pyo
-*.pyd
-*.egg-info/
-.env
-.ven
