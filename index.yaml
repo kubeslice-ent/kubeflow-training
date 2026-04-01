@@ -3,9 +3,9 @@ entries:
   kubeflow-llm-training:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-03-25T18:05:07.378141574Z"
+    created: "2026-04-01T12:50:15.871103234Z"
     description: Distributed LLM fine-tuning on Kubeflow using PyTorch FSDP and QLoRA
-    digest: 13a69bf1eaab3d4e41b0c23a698b4d3c1a875281444d9b4bc9e15cbda85629ab
+    digest: 564fde96b70323df26861f48a3870e6a3e0dc56321e96b0b6cd748e0e33ec1ad
     keywords:
     - kubeflow
     - pytorch
@@ -19,7 +19,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-03-25T18:05:07.377479026Z"
+    created: "2026-04-01T12:50:15.870445395Z"
     description: Distributed LLM fine-tuning on Kubeflow using PyTorch FSDP and QLoRA
     digest: c382225558a9617ce1dde6d8bc48e3bafd96577aa17e8efc22366fce1a7a98a1
     keywords:
@@ -33,4 +33,4 @@ entries:
     urls:
     - https://raw.githubusercontent.com/kubeslice-ent/kubeflow-training/gh-pages/kubeflow-llm-training-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-25T18:05:07.376463709Z"
+generated: "2026-04-01T12:50:15.869670297Z"
